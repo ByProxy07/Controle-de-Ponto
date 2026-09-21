@@ -1,0 +1,14 @@
+CONTROLE DE PONTO — VERSÃO ATUALIZADA
+
+1. Abra INSTALACAO.md antes de publicar.
+2. Faça backup e execute o diagnóstico supabase/preflight.sql.
+3. No banco atual com estrutura original, aplique a migração 20260921120000_secure_time_clock.sql.
+4. Crie/confirme sua conta e ative o administrador seguindo supabase/ativar-administrador.sql.
+5. Publique APENAS o conteúdo de dist/ no IIS, com HTTPS configurado.
+6. Faça a homologação descrita no guia antes de liberar aos funcionários.
+
+Sua URL e chave pública Supabase foram preservadas. Nenhum usuário foi apagado.
+Na primeira migração, contas existentes começam inativas: ative apenas identidades conferidas.
+O administrador continua batendo ponto em “Meu ponto”.
+As proteções do banco só entram em vigor depois que você aplicar a migração.
+Código, testes, scripts e resultado da validação estão incluídos.
