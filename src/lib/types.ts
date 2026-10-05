@@ -1,6 +1,9 @@
 export type UserRole = "admin" | "employee";
 
 export interface Profile {
+  account_kind?: "team" | "driver";
+  cpf_last4?: string | null;
+  driver_company?: string | null;
   id: string;
   name: string;
   email: string;

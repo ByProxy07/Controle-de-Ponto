@@ -159,6 +159,7 @@ export default function AuthPage() {
               ))}
           </div>
         )}
+        {!recovery && <a className="mt-6 block text-emerald-800 font-bold underline" href="/motoristas">Sou motorista · entrar com CPF</a>}
         <p className="mt-6 text-xs text-slate-500">
           Contas novas precisam ser ativadas. O acesso administrativo é
           concedido pelo responsável pelo sistema.

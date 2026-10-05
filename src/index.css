@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer components {
+ .driver-page { font-size: 20px; line-height: 1.55; }
+ .driver-page .field { font-size:20px; }
+ .driver-page input { min-height:60px; font-size:22px; }
+ .driver-primary { @apply w-full bg-emerald-800 text-white font-bold rounded-xl px-4 py-5 mt-5 disabled:opacity-60; min-height:72px; }
+ .driver-secondary { @apply w-full border-2 border-slate-400 text-slate-800 bg-white rounded-xl px-4 py-4 mt-4 flex items-center justify-center gap-3 disabled:opacity-60; min-height:60px; }
+ .driver-page .error,.driver-page .notice { font-size:19px; }
+}
+
 @layer base {
   body {
     @apply text-slate-800 bg-slate-50;

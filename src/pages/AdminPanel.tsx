@@ -3,6 +3,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui";
 import TimeSheet from "@/components/TimeSheet";
 import Occurrences from "@/components/Occurrences";
+import { DriverPinReset } from "@/components/DriverPinReset";
 import { errorMessage, readRows, rpc } from "@/lib/supabaseClient";
 import {
   dayKey,
@@ -45,6 +46,7 @@ export default function AdminPanel() {
   const [month, setMonth] = useState(dayKey().slice(0, 7));
   const [selected, setSelected] = useState("all");
   const [search, setSearch] = useState("");
+  const [group, setGroup] = useState("all");
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [occurrences, setOccurrences] = useState<Occurrence[]>([]);
@@ -100,7 +102,10 @@ export default function AdminPanel() {
   const people = profiles.filter(
     (p) =>
       (selected === "all" || p.id === selected) &&
-      `${p.name} ${p.email}`.toLowerCase().includes(search.toLowerCase()),
+      (group === "all" || (p.account_kind ?? "team") === group) &&
+      `${p.name} ${p.account_kind === "driver" ? p.cpf_last4 : p.email} ${p.driver_company ?? ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
   );
   const visible = entries.filter((e) => people.some((p) => p.id === e.user_id));
   const rows = people.flatMap((p) =>
@@ -217,7 +222,22 @@ export default function AdminPanel() {
         </p>
       )}
       {loading && <p role="status">Carregando dados…</p>}
-      <div className="panel grid sm:grid-cols-3 gap-4 no-print">
+      <div className="panel grid sm:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
+        <label className="field">
+          Grupo
+          <select
+            aria-label="Grupo"
+            value={group}
+            onChange={(e) => {
+              setGroup(e.target.value);
+              setSelected("all");
+            }}
+          >
+            <option value="all">Todos</option>
+            <option value="team">Equipe</option>
+            <option value="driver">Motoristas</option>
+          </select>
+        </label>
         <label className="field">
           Mês
           <input
@@ -247,7 +267,7 @@ export default function AdminPanel() {
         <label className="field">
           Pesquisar
           <input
-            placeholder="Nome ou e-mail"
+            placeholder="Nome, e-mail ou final do CPF"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -287,7 +307,11 @@ export default function AdminPanel() {
             <section className="panel" key={p.id}>
               <h2 className="text-lg font-bold mb-3">
                 {p.name} ·{" "}
-                {p.role === "admin" ? "Administrador" : "Colaborador"}
+                {p.role === "admin"
+                  ? "Administrador"
+                  : p.account_kind === "driver"
+                    ? "Motorista"
+                    : "Colaborador"}
               </h2>
               <TimeSheet
                 profile={p}
@@ -414,18 +438,28 @@ export default function AdminPanel() {
             <table className="w-full">
               <thead>
                 <tr>
-                  {["Nome", "E-mail", "Perfil", "Situação", "Ação"].map((v) => (
-                    <th key={v}>{v}</th>
-                  ))}
+                  {["Nome", "Identificação", "Perfil", "Situação", "Ação"].map(
+                    (v) => (
+                      <th key={v}>{v}</th>
+                    ),
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {people.map((p) => (
                   <tr key={p.id}>
                     <td>{p.name}</td>
-                    <td>{p.email}</td>
                     <td>
-                      {p.role === "admin" ? "Administrador" : "Colaborador"}
+                      {p.account_kind === "driver"
+                        ? `CPF final ${p.cpf_last4 ?? "—"}${p.driver_company ? ` · ${p.driver_company}` : ""}`
+                        : p.email}
+                    </td>
+                    <td>
+                      {p.role === "admin"
+                        ? "Administrador"
+                        : p.account_kind === "driver"
+                          ? "Motorista"
+                          : "Colaborador"}
                     </td>
                     <td>{p.active ? "Ativo" : "Aguardando / inativo"}</td>
                     <td>
@@ -436,6 +470,9 @@ export default function AdminPanel() {
                       >
                         Editar / ativar
                       </Button>
+                      {p.account_kind === "driver" && (
+                        <DriverPinReset profile={p} />
+                      )}
                     </td>
                   </tr>
                 ))}

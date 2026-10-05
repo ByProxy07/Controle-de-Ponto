@@ -7,8 +7,8 @@ import { PGlite } from "@electric-sql/pglite";
 test("database permissions and workflows", async (t) => {
   const db = new PGlite();
   t.after(() => db.close());
-  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE SCHEMA auth; CREATE SCHEMA storage;
- CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,raw_user_meta_data jsonb DEFAULT '{}');
+  await db.exec(`CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role; CREATE SCHEMA auth; CREATE SCHEMA storage;
+ CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,raw_user_meta_data jsonb DEFAULT '{}',raw_app_meta_data jsonb DEFAULT '{}');
  CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
  GRANT USAGE ON SCHEMA public,auth,storage TO anon,authenticated;
  GRANT EXECUTE ON FUNCTION auth.uid() TO anon,authenticated;
@@ -21,6 +21,7 @@ test("database permissions and workflows", async (t) => {
     "20260916141314_create_time_clock_schema.sql",
     "20260916142432_fix_rls_recursion_and_self_insert.sql",
     "20260921120000_secure_time_clock.sql",
+    "20260923100000_driver_portal.sql",
   ];
   for (const f of migrations)
     await db.exec(
@@ -51,6 +52,27 @@ test("database permissions and workflows", async (t) => {
     });
   const deny = (id, sql, params = []) =>
     assert.rejects(() => run(id, sql, params));
+  await t.test("driver identity requires trusted app metadata and starts inactive", async () => {
+    const id = randomUUID(), forged = randomUUID();
+    await db.query("INSERT INTO auth.users(id,email,raw_user_meta_data,raw_app_meta_data) VALUES($1,'opaque@motoristas.invalid',$2,$3)", [id,{name:'Motorista Teste',cpf_last4:'4725',role:'admin',active:true},{account_kind:'driver'}]);
+    await db.query("INSERT INTO auth.users(id,email,raw_user_meta_data) VALUES($1,'forged@example.test',$2)", [forged,{name:'Forjado',account_kind:'driver',cpf_last4:'4725'}]);
+    assert.deepEqual((await db.query('SELECT role,active,account_kind,cpf_last4 FROM profiles WHERE id=$1',[id])).rows[0],{role:'employee',active:false,account_kind:'driver',cpf_last4:'4725'});
+    assert.equal((await db.query('SELECT account_kind FROM profiles WHERE id=$1',[forged])).rows[0].account_kind,'team');
+    await deny(id,"SELECT public.clock_punch($1,'entry_1',NULL,NULL,'test')",[randomUUID()]);
+    await deny(id,"UPDATE profiles SET active=true WHERE id=$1",[id]);
+    await db.query('UPDATE profiles SET active=true WHERE id=$1',[id]);
+    const result=await run(id,"SELECT * FROM public.clock_punch($1,'entry_1',-12.69,-38.32,'driver test')",[randomUUID()]);
+    assert.equal(result.rows[0].user_id,id);
+    assert.equal((await db.query('SELECT count(*) AS n FROM time_entries WHERE user_id=$1',[id])).rows[0].n,1);
+  });
+  await t.test("rate limiter is private, atomic and expires", async () => {
+    await deny(emp,"SELECT public.driver_take_attempt('x',8,900)");
+    await deny(emp,"SELECT * FROM public.driver_auth_limits");
+    for(let i=0;i<10;i++)assert.equal((await db.query("SELECT driver_take_attempt('test',8,900) AS ok")).rows[0].ok,i<8);
+    assert.equal((await db.query("SELECT driver_take_attempt('different',8,900) AS ok")).rows[0].ok,true);
+    await db.exec("UPDATE driver_auth_limits SET window_start=now()-interval '16 minutes' WHERE bucket_key='test'");
+    assert.equal((await db.query("SELECT driver_take_attempt('test',8,900) AS ok")).rows[0].ok,true);
+  });
   await t.test(
     "signup ignores supplied admin and active metadata",
     async () => {
@@ -441,6 +463,9 @@ test("database permissions and workflows", async (t) => {
       assert.ok(
         (await db.query("SELECT * FROM public.time_entries")).rows.length >= 3,
       );
+      await db.exec(readFileSync(new URL('../supabase/migrations/'+migrations[3],import.meta.url),'utf8'));
+      assert.equal((await db.query('SELECT active FROM profiles WHERE id=$1',[admin])).rows[0].active,true);
+      assert.equal((await db.query("SELECT count(*) AS n FROM profiles WHERE account_kind='driver'")).rows[0].n,1);
     },
   );
 });

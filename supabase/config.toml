@@ -1,0 +1,6 @@
+project_id = "controle-de-ponto"
+
+[functions.driver-auth]
+# Cadastro/login são públicos. O handler valida CPF/PIN, limita tentativas e
+# exige JWT validado + administrador ativo para redefinições.
+verify_jwt = false

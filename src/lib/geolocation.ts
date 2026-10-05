@@ -1,13 +1,14 @@
 export interface GeoPosition {
-  latitude: number;
-  longitude: number;
-  accuracy: number;
+  latitude: number | null;
+  longitude: number | null;
+  accuracy: number | null;
 }
 
 export function getCurrentPosition(): Promise<GeoPosition> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
+    // Se o navegador não suportar geolocalização ou estiver em HTTP, não lança erro
     if (!navigator.geolocation) {
-      reject(new Error("Geolocalização não é suportada por este dispositivo."));
+      resolve({ latitude: null, longitude: null, accuracy: null });
       return;
     }
 
@@ -19,27 +20,16 @@ export function getCurrentPosition(): Promise<GeoPosition> {
           accuracy: position.coords.accuracy,
         });
       },
-      (err) => {
-        let message = "Não foi possível obter a localização.";
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            message =
-              "Permissão de localização negada. Habilite para registrar o ponto.";
-            break;
-          case err.POSITION_UNAVAILABLE:
-            message = "Localização indisponível no momento.";
-            break;
-          case err.TIMEOUT:
-            message = "Tempo esgotado ao obter localização.";
-            break;
-        }
-        reject(new Error(message));
+      () => {
+        // Se der erro de permissão/HTTP/timeout, resolve pacificamente com valores nulos
+        resolve({ latitude: null, longitude: null, accuracy: null });
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 0 }
     );
   });
 }
 
-export function getGoogleMapsUrl(lat: number, lng: number): string {
+export function getGoogleMapsUrl(lat: number | null, lng: number | null): string {
+  if (!lat || !lng) return "#";
   return `https://www.google.com/maps?q=${lat},${lng}`;
 }

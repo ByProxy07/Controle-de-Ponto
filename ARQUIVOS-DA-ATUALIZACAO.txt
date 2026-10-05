@@ -1,0 +1,30 @@
+ATUALIZACAO PARCIAL - MOTORISTAS
+
+Copie sobre a raiz do projeto completo; mescle as pastas.
+Base: ultimo ZIP enviado em 23/09/2026.
+
+SUBSTITUIR  eslint.config.js
+SUBSTITUIR  package-lock.json
+SUBSTITUIR  package.json
+SUBSTITUIR  src/App.tsx
+ADICIONAR  src/components/DriverPinReset.tsx
+SUBSTITUIR  src/index.css
+ADICIONAR  src/lib/driverApi.ts
+SUBSTITUIR  src/lib/excelExport.ts
+SUBSTITUIR  src/lib/types.ts
+SUBSTITUIR  src/pages/AdminPanel.tsx
+SUBSTITUIR  src/pages/AuthPage.tsx
+SUBSTITUIR  src/pages/MotoristaPonto.tsx
+ADICIONAR  supabase/config.toml
+ADICIONAR  supabase/functions/_shared/driver-identity.d.mts
+ADICIONAR  supabase/functions/_shared/driver-identity.mjs
+ADICIONAR  supabase/functions/driver-auth/handler.mjs
+ADICIONAR  supabase/functions/driver-auth/index.ts
+ADICIONAR  supabase/migrations/20260923100000_driver_portal.sql
+ADICIONAR  tests/driver-auth.test.mjs
+ADICIONAR  tests/drivers-ui.mjs
+SUBSTITUIR  tests/security.test.mjs
+SUBSTITUIR  tests/ui.mjs
+
+Nao inclui .env, dist, node_modules, certificados ou configuracao Nginx.
+Leia LEIA-PRIMEIRO-MOTORISTAS.md antes de publicar.

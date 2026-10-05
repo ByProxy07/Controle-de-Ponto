@@ -66,6 +66,7 @@ try {
     },
   ];
   const entries = [];
+  profiles.push({...profiles[1],id:'10000000-0000-0000-0000-000000000003',name:'Motorista Teste',email:'opaque@motoristas.invalid',account_kind:'driver',cpf_last4:'4725'});
   let failReads = false;
   const rpcCalls = [];
   const context = await browser.newContext({
@@ -89,6 +90,7 @@ try {
         headers: { "access-control-allow-origin": "*" },
       });
     if (address.pathname.includes("/auth/v1/logout")) return fulfill({});
+    if (address.pathname.includes('/functions/v1/driver-auth')) {rpcCalls.push({name:'driver-auth',args:req.postDataJSON()});return fulfill({message:'PIN redefinido.'});}
     if (address.pathname.includes("/auth/v1/user"))
       return fulfill({
         id: adminId,
@@ -182,9 +184,12 @@ try {
   const file = await download;
   const workbook = new ExcelJS.Workbook();
   await workbook.xlsx.readFile(await file.path());
-  assert.equal(workbook.worksheets.length, 4);
-  assert.ok(workbook.getWorksheet("Espelho").rowCount > 1);
-  console.log("PASS Excel abre e contém espelho mensal");
+  const timesheet = workbook.getWorksheet("FOLHA DE PONTO");
+  assert.ok(timesheet);
+  assert.equal(timesheet.getCell("C7").value, "Moisés Teste");
+  assert.equal(timesheet.getCell("C6").value, "TI");
+  assert.equal(timesheet.getCell("A51").value.trim(), "Colaborador:");
+  console.log("PASS Excel abre no modelo e identifica o colaborador");
   await page.getByRole("button", { name: "Coordenador", exact: true }).click();
   await page.getByRole("button", { name: "Marcações", exact: true }).click();
   await page
@@ -217,6 +222,15 @@ try {
     .click();
   await page.getByText("Ativação e cadastro", { exact: true }).waitFor();
   console.log("PASS gestão de colaboradores");
+  await page.getByLabel('Grupo',{exact:true}).selectOption('driver');
+  await page.getByRole('cell',{name:'CPF final 4725',exact:true}).waitFor();
+  assert.equal(await page.getByRole('cell',{name:'Colaborador Teste',exact:true}).count(),0);
+  assert.equal(await page.getByText('opaque@motoristas.invalid',{exact:true}).count(),0);
+  await page.getByRole('button',{name:'Redefinir PIN',exact:true}).click();
+  await page.getByLabel('Novo PIN (6 números)').fill('482951');await page.getByLabel('Confirmar novo PIN').fill('482951');await page.getByLabel('Motivo da redefinição').fill('Motorista esqueceu o PIN');
+  await page.getByRole('button',{name:'Salvar novo PIN',exact:true}).click();await page.getByText('PIN redefinido.',{exact:true}).waitFor();
+  assert.ok(rpcCalls.some(c=>c.name==='driver-auth'&&c.args.action==='reset-pin'&&c.args.userId===profiles[2].id));
+  console.log('PASS filtro de motoristas e redefinição de PIN no painel');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: "Meu ponto", exact: true }).click();
   await page.getByRole("button", { name: "Solicitações", exact: true }).click();

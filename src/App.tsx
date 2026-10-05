@@ -1,15 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import AuthPage from "@/pages/AuthPage";
 import EmployeePanel from "@/pages/EmployeePanel";
 import AdminPanel from "@/pages/AdminPanel";
-import { Spinner } from "@/components/ui";
-import { Fingerprint, LayoutDashboard } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MotoristaPonto } from "@/pages/MotoristaPonto";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-type ViewMode = "admin" | "employee";
-
+import { Button } from "@/components/ui";
+function driverRoute() {
+  return (
+    /^\/motoristas?\/?$/.test(window.location.pathname) ||
+    /^#\/?motoristas?\/?$/.test(window.location.hash)
+  );
+}
 function AppContent() {
   const {
     session,
@@ -20,20 +22,25 @@ function AppContent() {
     signOut,
     refreshProfile,
   } = useAuth();
-  const [viewMode, setViewMode] = useState<ViewMode>("admin");
-
-  if (loading) {
+  const [driver, setDriver] = useState(driverRoute);
+  const [view, setView] = useState<"admin" | "employee">("admin");
+  useEffect(() => {
+    const change = () => setDriver(driverRoute());
+    window.addEventListener("popstate", change);
+    window.addEventListener("hashchange", change);
+    return () => {
+      window.removeEventListener("popstate", change);
+      window.removeEventListener("hashchange", change);
+    };
+  }, []);
+  if (driver || profile?.account_kind === "driver") return <MotoristaPonto />;
+  if (loading)
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Spinner className="w-8 h-8" />
-      </div>
+      <main className="p-8" role="status">
+        Carregando sua conta…
+      </main>
     );
-  }
-
-  if (recovery || !session) {
-    return <AuthPage />;
-  }
-
+  if (recovery || !session) return <AuthPage />;
   if (error || !profile || !profile.active)
     return (
       <main className="min-h-screen grid place-items-center bg-slate-100 p-6">
@@ -48,60 +55,36 @@ function AppContent() {
               "O administrador precisa ativar seu cadastro antes do primeiro registro de ponto."}
           </p>
           <div className="flex gap-4 mt-5">
-            <button onClick={refreshProfile}>Verificar novamente</button>
-            <button onClick={signOut}>Sair</button>
+            <Button onClick={refreshProfile}>Verificar novamente</Button>
+            <Button variant="outline" onClick={signOut}>
+              Sair
+            </Button>
           </div>
         </section>
       </main>
     );
-
-  const isAdmin = profile.role === "admin";
-
-  // Admin can switch between coordinator and employee views
-  if (isAdmin) {
+  if (profile.role === "admin")
     return (
-      <div>
-        {/* View mode switcher bar */}
-        <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 h-12 flex items-center justify-center px-4">
-          <div className="flex gap-1 p-1 bg-slate-100 rounded-xl">
-            <button
-              onClick={() => setViewMode("admin")}
-              className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-                viewMode === "admin"
-                  ? "bg-white text-emerald-700 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700",
-              )}
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              Coordenador
-            </button>
-            <button
-              onClick={() => setViewMode("employee")}
-              className={cn(
-                "flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-medium transition-all",
-                viewMode === "employee"
-                  ? "bg-white text-emerald-700 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700",
-              )}
-            >
-              <Fingerprint className="w-4 h-4" />
-              Meu ponto
-            </button>
-          </div>
-        </div>
-
-        {/* Content with top padding for the switcher bar */}
-        <div className="pt-12">
-          {viewMode === "admin" ? <AdminPanel /> : <EmployeePanel />}
-        </div>
-      </div>
+      <>
+        <nav className="no-print sticky top-0 z-40 bg-white border-b p-2 flex justify-center gap-2">
+          <Button
+            variant={view === "admin" ? "primary" : "secondary"}
+            onClick={() => setView("admin")}
+          >
+            Coordenador
+          </Button>
+          <Button
+            variant={view === "employee" ? "primary" : "secondary"}
+            onClick={() => setView("employee")}
+          >
+            Meu ponto
+          </Button>
+        </nav>
+        {view === "admin" ? <AdminPanel /> : <EmployeePanel />}
+      </>
     );
-  }
-
   return <EmployeePanel />;
 }
-
 export default function App() {
   return (
     <ErrorBoundary>

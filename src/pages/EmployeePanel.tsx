@@ -18,6 +18,7 @@ import {
 import { PUNCH_TYPES, type TimeEntry, type Occurrence } from "@/lib/types";
 import { getCurrentPosition } from "@/lib/geolocation";
 import { exportReport } from "@/lib/excelExport";
+
 export default function EmployeePanel() {
   const { profile, signOut } = useAuth();
   const [tab, setTab] = useState("punch");
@@ -35,6 +36,7 @@ export default function EmployeePanel() {
   const generation = useRef(0);
   const punching = useRef(false);
   const currentMonth = dayKey(now).slice(0, 7);
+
   const load = useCallback(async () => {
     if (!profile) return;
     const version = ++generation.current;
@@ -62,6 +64,7 @@ export default function EmployeePanel() {
       if (version === generation.current) setLoading(false);
     }
   }, [profile, month, currentMonth]);
+
   useEffect(() => {
     const counter = generation;
     void load();
@@ -69,6 +72,7 @@ export default function EmployeePanel() {
       counter.current++;
     };
   }, [load]);
+
   useEffect(() => {
     const timer = setInterval(() => setNow(new Date()), 1000);
     const refresh = () => {
@@ -85,9 +89,11 @@ export default function EmployeePanel() {
       window.removeEventListener("focus", refresh);
     };
   }, [load]);
+
   if (!profile) return null;
   const next = getNextPunchType(today);
   const todayRows = getTodayEntries(today, now);
+
   async function punch() {
     if (!profile || !next || punching.current) return;
     punching.current = true;
@@ -95,12 +101,18 @@ export default function EmployeePanel() {
     setError("");
     setNotice("");
     try {
-      if (!window.isSecureContext)
-        throw new Error("Abra o sistema em HTTPS para capturar a localização.");
-      const geo = await getCurrentPosition();
+      // Captura a localização de forma segura; se falhar ou estiver em HTTP, não trava a execução
+      let geo = { latitude: null as number | null, longitude: null as number | null };
+      try {
+        geo = await getCurrentPosition();
+      } catch (e) {
+        console.warn("Não foi possível obter a localização:", e);
+      }
+
       const storageKey = `clock-request:${profile.id}:${dayKey()}:${next}`;
       const requestId = localStorage.getItem(storageKey) || crypto.randomUUID();
       localStorage.setItem(storageKey, requestId);
+
       const record = await rpc<TimeEntry>("clock_punch", {
         p_request_id: requestId,
         p_type: next,
@@ -108,6 +120,7 @@ export default function EmployeePanel() {
         p_lng: geo.longitude,
         p_device: getDeviceInfo(),
       });
+
       localStorage.removeItem(storageKey);
       setReceipt(record);
       setNotice(`Ponto confirmado às ${formatTime(record.timestamp)}.`);
@@ -121,6 +134,7 @@ export default function EmployeePanel() {
       setBusy(false);
     }
   }
+
   async function exportData() {
     if (!profile) return;
     setBusy(true);
@@ -132,6 +146,7 @@ export default function EmployeePanel() {
       setBusy(false);
     }
   }
+
   return (
     <main className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6">
       <header className="flex justify-between gap-4">
