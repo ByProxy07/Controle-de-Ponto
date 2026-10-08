@@ -1,3 +1,5 @@
+import { createRequestId } from "@/lib/requestId";
+import PunchChangeRequests from "@/components/PunchChangeRequests";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Clock, RefreshCw } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -110,7 +112,7 @@ export default function EmployeePanel() {
       }
 
       const storageKey = `clock-request:${profile.id}:${dayKey()}:${next}`;
-      const requestId = localStorage.getItem(storageKey) || crypto.randomUUID();
+      const requestId = localStorage.getItem(storageKey) || createRequestId();
       localStorage.setItem(storageKey, requestId);
 
       const record = await rpc<TimeEntry>("clock_punch", {
@@ -181,6 +183,7 @@ export default function EmployeePanel() {
         {[
           ["punch", "Registrar ponto"],
           ["sheet", "Espelho mensal"],
+          ["changes", "Alterar horário"],
           ["occ", "Solicitações"],
         ].map(([key, label]) => (
           <Button
@@ -287,6 +290,7 @@ export default function EmployeePanel() {
           )}
         </section>
       )}
+      {tab === "changes" && <PunchChangeRequests profile={profile} onRefresh={load} />}
       {tab === "occ" && (
         <Occurrences items={occurrences} profile={profile} onRefresh={load} />
       )}

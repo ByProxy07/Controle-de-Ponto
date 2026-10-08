@@ -1,3 +1,4 @@
+import PunchChangeRequests from "@/components/PunchChangeRequests";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui";
@@ -197,6 +198,7 @@ export default function AdminPanel() {
           ["entries", "Marcações"],
           ["people", "Colaboradores"],
           ["occ", "Solicitações"],
+          ["changes", "Alterações de horário"],
           ["audit", "Histórico de alterações"],
         ].map(([key, label]) => (
           <Button
@@ -325,11 +327,11 @@ export default function AdminPanel() {
       {!loading && !error && tab === "entries" && (
         <section className="panel space-y-4">
           <Button
-            disabled={!profiles.some((p) => p.active)}
+            disabled={!people.some((p) => p.active && p.id !== profile.id)}
             onClick={() =>
               setAdjust({
                 entry: null,
-                user: people.find((p) => p.active)?.id ?? profile.id,
+                user: people.find((p) => p.active && p.id !== profile.id)?.id ?? "",
                 date: dayKey(),
                 time: "08:00",
                 type: "entry_1",
@@ -399,7 +401,8 @@ export default function AdminPanel() {
                         )}
                       </td>
                       <td>
-                        {!entry.voided_at && (
+                        {entry.user_id === profile.id && <p className="text-sm">Solicite em Meu ponto → Alterar horário.</p>}
+                        {!entry.voided_at && entry.user_id !== profile.id && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -481,6 +484,7 @@ export default function AdminPanel() {
           </div>
         </section>
       )}
+      {tab === "changes" && <PunchChangeRequests admin profile={profile} profiles={people} month={month} onRefresh={load} />}
       {tab === "occ" && (
         <Occurrences
           admin
@@ -559,7 +563,7 @@ export default function AdminPanel() {
                 value={adjust.user}
                 onChange={(e) => setAdjust({ ...adjust, user: e.target.value })}
               >
-                {profiles.map((p) => (
+                {profiles.filter((p) => p.id !== profile.id && p.active).map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>

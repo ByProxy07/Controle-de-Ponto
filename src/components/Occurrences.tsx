@@ -1,3 +1,4 @@
+import { createRequestId } from "@/lib/requestId";
 import { useRef, useState } from "react";
 import { Button } from "./ui";
 import { supabase, rpc, errorMessage } from "@/lib/supabaseClient";
@@ -46,7 +47,7 @@ export default function Occurrences({
             file.size > 5242880)
         )
           throw new Error("Anexe PDF, PNG ou JPEG de até 5 MB.");
-        const id = crypto.randomUUID();
+        const id = createRequestId();
         let path: string | null = null;
         if (file) {
           path = `${profile.id}/${id}.${file.type === "application/pdf" ? "pdf" : file.type === "image/png" ? "png" : "jpg"}`;
@@ -120,9 +121,9 @@ export default function Occurrences({
       )}
       {!admin && (
         <form ref={form} onSubmit={submit} className="panel space-y-4">
-          <h2 className="font-bold">Solicitar ajuste ou justificar ausência</h2>
+          <h2 className="font-bold">Justificar ausência ou ponto esquecido</h2>
           <p className="text-sm text-slate-500">
-            Informe os horários corretos na descrição. A aprovação da
+            Para corrigir um horário já registrado, use “Alterar horário”. Para ponto esquecido, informe os horários na descrição. A aprovação desta
             justificativa não altera marcações nem abona horas; o administrador
             faz o ajuste separadamente.
           </p>

@@ -1,3 +1,5 @@
+import { createRequestId } from "@/lib/requestId";
+import PunchChangeRequests from "@/components/PunchChangeRequests";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Truck, CheckCircle2, Eye, EyeOff, LogOut } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -199,7 +201,7 @@ export function MotoristaPonto() {
         );
       const geo = await getCurrentPosition();
       const key = `clock-request:${profile.id}:${dayKey()}:${next}`;
-      const requestId = localStorage.getItem(key) || crypto.randomUUID();
+      const requestId = localStorage.getItem(key) || createRequestId();
       localStorage.setItem(key, requestId);
       const result = await rpc<TimeEntry>("clock_punch", {
         p_request_id: requestId,
@@ -356,8 +358,12 @@ export function MotoristaPonto() {
           </ol>
         </section>
         <p className="text-base my-4">
-          Esqueceu um ponto ou precisa corrigir? Avise o responsável.
+          Esqueceu um ponto? Avise o responsável. Para corrigir um horário já registrado, use a opção abaixo.
         </p>
+        <details className="my-5 text-base">
+          <summary className="driver-secondary cursor-pointer">Solicitar alteração de horário</summary>
+          <div className="mt-4"><PunchChangeRequests profile={profile} onRefresh={load} /></div>
+        </details>
         <button className="driver-secondary" disabled={busy} onClick={logout}>
           <LogOut aria-hidden="true" size={24} />
           Sair da minha conta
